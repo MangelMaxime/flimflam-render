@@ -1,0 +1,37 @@
+{
+  "name": "flyd-construct",
+  "version": "0.0.1",
+  "description": "A system for using Flyd to combine discrete UI modules",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel index.es6 -o index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayrbolton/flyd-construct.git"
+  },
+  "keywords": [
+    "flyd",
+    "snabbdom",
+    "ui",
+    "vdom",
+    "virtual-dom",
+    "frp",
+    "rx",
+    "streams"
+  ],
+  "author": "jay r bolton <jayrbolton@gmail.com> (http://jayrbolton.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jayrbolton/flyd-construct/issues"
+  },
+  "homepage": "https://github.com/jayrbolton/flyd-construct#readme",
+  "devDependencies": {
+    "babel-cli": "6.5.1"
+  },
+  "dependencies": {
+    "flyd": "0.2.1",
+    "ramda": "0.19.1"
+  }
+}
