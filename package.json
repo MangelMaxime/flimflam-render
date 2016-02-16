@@ -1,6 +1,6 @@
 {
   "name": "flyd-construct",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A system for using Flyd to combine discrete UI modules",
   "main": "index.js",
   "scripts": {
