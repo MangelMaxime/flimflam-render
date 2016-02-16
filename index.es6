@@ -23,7 +23,7 @@ function ui(component) {
   let childEvents        = R.map(R.apply((key, pair) => [key, R.head(pair)]), childDefaults)
 
   // Merge in every default child state under a key within the parent state
-  componeng.defaultState = R.reduce(
+  component.defaultState = R.reduce(
     (parentState, pair) => {
       let [childKey, childState] = pair
       return R.assoc(childKey, R.merge(parentState[childKey], childState), parentState)

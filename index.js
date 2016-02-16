@@ -40,7 +40,7 @@ function ui(component) {
   }), childDefaults);
 
   // Merge in every default child state under a key within the parent state
-  componeng.defaultState = _ramda2['default'].reduce(function (parentState, pair) {
+  component.defaultState = _ramda2['default'].reduce(function (parentState, pair) {
     var _pair = _slicedToArray(pair, 2);
 
     var childKey = _pair[0];
