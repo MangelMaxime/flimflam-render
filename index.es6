@@ -1,6 +1,18 @@
 import flyd from 'flyd'
 import flyd_scanMerge from 'flyd/module/scanmerge'
 import R from 'ramda'
+import snabbdom from '../ffffocus/node_modules/snabbdom'
+
+flyd.lift = require('flyd/module/lift')
+
+const defaultPatch = snabbdom.init([
+  require('../ffffocus/node_modules/snabbdom/modules/class')
+, require('../ffffocus/node_modules/snabbdom/modules/props')
+, require('../ffffocus/node_modules/snabbdom/modules/style')
+, require('../ffffocus/node_modules/snabbdom/modules/eventlisteners')
+, require('../ffffocus/node_modules/snabbdom/modules/attributes')
+])
+
 
 // Given a UI component object with these keys:
 //   events: an object of event names set to flyd streams
@@ -9,65 +21,59 @@ import R from 'ramda'
 //   children: an object of child module namespaces (keys) and child module state streams (values) to be mixed into this module
 // Return:
 //   A single state stream that combines the default state, updaters, and child components
-function ui(component) {
-  // Array of child state streams (NOTE: recursive)
-  let childStreams = R.compose(
-    R.toPairs
-  , R.map(ui)
-  )(component.children || [])
+function flam(state, view, container, options) {
+  options = options || {}
+  let patch = options.patch || defaultPatch
 
-  // Array of static default states for every child component
-  // Note this is an array of child module keys and a pair of child module events and child module default states
-  let childDefaults      = R.map(R.apply((key, $)    => [key, $()]), childStreams)
-  let childDefaultStates = R.map(R.apply((key, pair) => [key, R.last(pair)]), childDefaults)
-  let childEvents        = R.map(R.apply((key, pair) => [key, R.head(pair)]), childDefaults)
-
-  // Merge in every default child state under a key within the parent state
-  component.defaultState = R.reduce(
-    (parentState, pair) => {
-      let [childKey, childState] = pair
-      return R.assoc(childKey, R.merge(parentState[childKey], childState), parentState)
-    }
-  , component.defaultState
-  , childDefaultStates
+  R.map( // Just some helpful warnings if you accidentally name 'updates' as 'updaters' or something
+    prop => !state[prop] && console && console.warn(`No .${prop} present in state: `, state)
+  , ['data', 'streams', 'updates']
   )
 
-  // Nest child event objects into the parent events obj
-  component.events = R.reduce(
-    (parentEvents, pair) => {
-      let [childKey, childEvents] = pair
-      return R.assoc(childKey, R.merge(parentEvents[childKey], childEvents), parentEvents)
-    }
-  , component.events
-  , childEvents
-  )
+  let state$ = toStateStream(state, options)
+  let vtree$ = flyd.scan(patch, container, flyd.map(view, state$))
 
-  // Turn the array of child component streams ([key, stream]) into an array of pairs that can go into flyd/module/scanMerge
-  // [key, stream] -> [[stream, (state, [events, childState]) -> state]]
-  // Every new state on each child stream updates the nested child state in the parent component
-  let childUpdaters = R.map(
-    R.apply((key, stream) => [stream, (state, pair) => R.assoc(key, R.merge(state[key], R.last(pair)), state)])
-  , childStreams
-  )
-  
-  // Every parent update on a child state updates the child component
+  // Render it!
+  return { vtree$, state$ }
+}
 
-  // Concat the child component updaters with this component's updaters
-  // Flip the component's updater functions to make it more compatible with Ramda functions
+
+function toStateStream(state, options) {
+  // Every parent update on a child state updates the child state
+
+  // Concat the child state updaters with this state's updaters
+  // Flip the state's updater functions to make it more compatible with Ramda functions
   // the updater functions for flyd_scanMerge are like scan, they take (accumulator, val) -> accumulator
   // instead we want (val, accumulator) -> accumulator
   // That way we can use partial applicaton functions easily like [[stream1, R.assoc('prop')], [stream2, R.evolve({count: R.inc})]]
-  let updaters = R.concat(
-    childUpdaters
-  , R.map(R.apply((stream, fn) => [stream, (state, val) => {return fn(val, state)}]), component.updates)
-  )
+  let updatePairs = R.compose(
+    R.map(R.apply((key, fn) => [state.streams[key], (data, val) => fn(val, data)]))
+  , R.filter(R.apply((key, fn) => R.hasOwnProperty(key, state.streams))) // filter out streams actually present in .streams
+  , R.toPairs
+  )(state.updates || {})
 
-  // Wrap it in immediate because we want to emit the defaultState onto the stream as soon as the page loads
-  let state$ = flyd.immediate(flyd_scanMerge(updaters, component.defaultState))
+  // Hooray for scanMerge !!!
+  let data$ = flyd.immediate(flyd_scanMerge(updatePairs, state.data))
 
-  // Finally, pair every state value on the state stream with the events object so your view function has access to the events
-  return flyd.map(s => [component.events, s], state$)
+  // For every event on each child state stream, lift that into our own parent state stream
+  let lifter = key => (state, childState) =>
+    flyd.lift(
+      R.assocPath(['children', key])
+    , toStateStream(childState)
+    , state
+    )
+
+  // Reduce over all children, applying lift to each one
+  let state$ = R.compose(
+    R.reduce(key => R.apply(lifter(key)), R.__, state.children || [])
+  , flyd.map(d => R.assoc('data', d, state))
+  )(data$)
+
+  if(options.debug)
+    flyd.map(s => console.log('%cState data: %O', "color:green; font-weight: bold;", s.data), state$)
+
+  return state$
 }
 
-module.exports = ui
+module.exports = flam
 
