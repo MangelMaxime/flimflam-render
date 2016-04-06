@@ -12,6 +12,7 @@
     "url": "git+https://github.com/jayrbolton/flyd-construct.git"
   },
   "keywords": [
+    "flimflam",
     "flyd",
     "snabbdom",
     "ui",
@@ -31,6 +32,7 @@
     "babel-cli": "6.5.1"
   },
   "dependencies": {
+    "snabbdom": "0.3.1",
     "flyd": "0.2.1",
     "ramda": "0.19.1"
   }
