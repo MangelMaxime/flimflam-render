@@ -1,11 +1,11 @@
 {
   "name": "flimflam-render",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The page render function for the flimflam architecture",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "babel index.es6 > index.js"
+    "build": "browserify -t babelify index.es6 > index.js"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,8 @@
   },
   "homepage": "https://github.com/jayrbolton/flimflam-render#readme",
   "devDependencies": {
-    "babel-cli": "6.5.1"
+    "babel-cli": "6.5.1",
+    "babelify": "6.4.0"
   },
   "dependencies": {
     "snabbdom": "0.3.1",
