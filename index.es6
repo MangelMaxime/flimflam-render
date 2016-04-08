@@ -1,18 +1,18 @@
 // Render a flimflam component using flyd, ramda, and snabbdom
 
 import flyd from 'flyd'
-import flyd_scanMerge from 'flyd/module/scanmerge'
 import R from 'ramda'
-import snabbdom from '../ffffocus/node_modules/snabbdom'
+import snabbdom from 'snabbdom'
 
 flyd.lift = require('flyd/module/lift')
+flyd.scanMerge = require('flyd/module/scanmerge')
 
 const defaultPatch = snabbdom.init([
-  require('../ffffocus/node_modules/snabbdom/modules/class')
-, require('../ffffocus/node_modules/snabbdom/modules/props')
-, require('../ffffocus/node_modules/snabbdom/modules/style')
-, require('../ffffocus/node_modules/snabbdom/modules/eventlisteners')
-, require('../ffffocus/node_modules/snabbdom/modules/attributes')
+  require('snabbdom/modules/class')
+, require('snabbdom/modules/props')
+, require('snabbdom/modules/style')
+, require('snabbdom/modules/eventlisteners')
+, require('snabbdom/modules/attributes')
 ])
 
 
@@ -53,7 +53,7 @@ function toComponentStream(component, options) {
 
   // Hooray for scanMerge !!!
   // We must use flyd.immediate so we get the component's default state on the stream immediately on pageload
-  let state$ = flyd.immediate(flyd_scanMerge(updatePairs, component.state || {}))
+  let state$ = flyd.immediate(flyd.scanMerge(updatePairs, component.state || {}))
 
   // update the 'state' key for every new value on the state stream
   let component$ = flyd.map(s => R.assoc('state', s, component), state$)
