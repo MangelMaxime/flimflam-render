@@ -1,7 +1,7 @@
 {
-  "name": "flyd-construct",
-  "version": "0.0.3",
-  "description": "A system for using Flyd to combine discrete UI modules",
+  "name": "flimflam-render",
+  "version": "0.0.1",
+  "description": "The page render function for the flimflam architecture",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -15,19 +15,14 @@
     "flimflam",
     "flyd",
     "snabbdom",
-    "ui",
-    "vdom",
-    "virtual-dom",
-    "frp",
-    "rx",
-    "streams"
+    "ramda"
   ],
   "author": "jay r bolton <jayrbolton@gmail.com> (http://jayrbolton.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jayrbolton/flyd-construct/issues"
+    "url": "https://github.com/jayrbolton/flimflam-render/issues"
   },
-  "homepage": "https://github.com/jayrbolton/flyd-construct#readme",
+  "homepage": "https://github.com/jayrbolton/flimflam-render#readme",
   "devDependencies": {
     "babel-cli": "6.5.1"
   },
