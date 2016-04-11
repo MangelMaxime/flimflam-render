@@ -63,7 +63,7 @@ function toComponentStream(component, options) {
   component$ = R.reduce(
     (stream, pair) => {
       let [key, child] = pair
-      let child$ = toStateStream(child, options)
+      let child$ = toComponentStream(child, options)
       return flyd.lift(R.assocPath(['children', key]), child$, stream)
     }
   , component$

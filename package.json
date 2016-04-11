@@ -1,15 +1,15 @@
 {
   "name": "flimflam-render",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "The page render function for the flimflam architecture",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify -t babelify index.es6 > index.js"
+    "build": "babel index.es6 -o index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jayrbolton/flyd-construct.git"
+    "url": "git+https://github.com/jayrbolton/flimflam-render.git"
   },
   "keywords": [
     "flimflam",
