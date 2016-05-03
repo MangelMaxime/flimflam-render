@@ -36,7 +36,13 @@ function render(component, view, container, options) {
   var patch = options.patch || defaultPatch;
 
   // Render it!
-  var component$ = toComponentStream(component, options);
+  var component$ = toComponentStream(component);
+
+  // You can get a console.log record of all new `.state` objects on your component stream for debugging by setting `options.debug: true`
+  if (options.debug) _flyd2['default'].map(function (s) {
+    return console.log('%cState: %O', "color:green; font-weight: bold;", s.state);
+  }, component$);
+
   var vtree$ = _flyd2['default'].scan(patch, container, _flyd2['default'].map(view, component$));
   return { component$: component$, vtree$: vtree$ };
 }
@@ -49,7 +55,19 @@ function render(component, view, container, options) {
 // That is, the updater functions for flyd.scanMerge are like scan: (accumulator, val) -> accumulator
 // instead we want (val, accumulator) -> accumulator
 // That way we can use partial applicaton functions easily like { stream1: R.assoc('prop'), stream2: R.evolve({count: R.inc}) }
-function toComponentStream(component, options) {
+function toComponentStream(component) {
+  component.updates = component.updates || {};
+  component.streams = component.streams || {};
+  component.state = component.state || {};
+  component.children = component.children || {};
+
+  // By default, every stream in .streams get an update using R.assoc in .updates
+  var updates = _ramda2['default'].compose(_ramda2['default'].merge(_ramda2['default'].__, component.updates), _ramda2['default'].mapObjIndexed(function (stream, key) {
+    return function (val, state) {
+      return _ramda2['default'].assoc(key, val, state);
+    };
+  }))(component.streams);
+
   // Construct array of pairs of stream/updateFunc to use with scanMerge
   var updatePairs = _ramda2['default'].compose(_ramda2['default'].map(_ramda2['default'].apply(function (key, fn) {
     return [component.streams[key], function (state, val) {
@@ -58,11 +76,16 @@ function toComponentStream(component, options) {
   })), _ramda2['default'].filter(_ramda2['default'].apply(function (key, fn) {
     return component.streams[key];
   })), // only use streams actually present in .streams
-  _ramda2['default'].toPairs)(component.updates || {});
+  _ramda2['default'].toPairs)(updates);
 
   // Hooray for scanMerge !!!
   // We must use flyd.immediate so we get the component's default state on the stream immediately on pageload
-  var state$ = _flyd2['default'].immediate(_flyd2['default'].scanMerge(updatePairs, component.state || {}));
+  var state$ = _flyd2['default'].immediate(_flyd2['default'].scanMerge(updatePairs, component.state));
+
+  // If any streams within .streams had initial values, let's trigger them for their state update, which can serve as a another way to set default vals
+  _ramda2['default'].map(function (s) {
+    return s() !== undefined && s(s());
+  }, _ramda2['default'].map(_ramda2['default'].head, updatePairs));
 
   // update the 'state' key for every new value on the state stream
   var component$ = _flyd2['default'].map(function (s) {
@@ -77,14 +100,9 @@ function toComponentStream(component, options) {
     var key = _pair[0];
     var child = _pair[1];
 
-    var child$ = toComponentStream(child, options);
+    var child$ = toComponentStream(child);
     return _flyd2['default'].lift(_ramda2['default'].assocPath(['children', key]), child$, stream);
   }, component$, _ramda2['default'].toPairs(component.children));
-
-  // You can get a console.log record of all new `.state` objects on your component stream for debugging by setting `options.debug: true`
-  if (options.debug) _flyd2['default'].map(function (s) {
-    return console.log('%cState: %O', "color:green; font-weight: bold;", s.state);
-  }, component$);
 
   return component$;
 }

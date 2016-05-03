@@ -29,7 +29,12 @@ function render(component, view, container, options) {
   let patch = options.patch || defaultPatch
 
   // Render it!
-  let component$ = toComponentStream(component, options)
+  let component$ = toComponentStream(component)
+
+  // You can get a console.log record of all new `.state` objects on your component stream for debugging by setting `options.debug: true`
+  if(options.debug)
+    flyd.map(s => console.log('%cState: %O', "color:green; font-weight: bold;", s.state), component$)
+
   let vtree$ = flyd.scan(patch, container, flyd.map(view, component$))
   return { component$, vtree$ }
 }
@@ -43,17 +48,31 @@ function render(component, view, container, options) {
 // That is, the updater functions for flyd.scanMerge are like scan: (accumulator, val) -> accumulator
 // instead we want (val, accumulator) -> accumulator
 // That way we can use partial applicaton functions easily like { stream1: R.assoc('prop'), stream2: R.evolve({count: R.inc}) }
-function toComponentStream(component, options) {
+function toComponentStream(component) {
+  component.updates = component.updates || {}
+  component.streams = component.streams || {}
+  component.state = component.state || {}
+  component.children = component.children || {}
+  
+  // By default, every stream in .streams get an update using R.assoc in .updates
+  let updates = R.compose(
+    R.merge(R.__, component.updates)
+  , R.mapObjIndexed((stream, key) => ((val, state) => R.assoc(key, val, state)))
+  )(component.streams)
+
   // Construct array of pairs of stream/updateFunc to use with scanMerge
   let updatePairs = R.compose(
     R.map(R.apply((key, fn) => [component.streams[key], (state, val) => fn(val, state)]))
   , R.filter(R.apply((key, fn) => component.streams[key])) // only use streams actually present in .streams
   , R.toPairs
-  )(component.updates || {})
+  )(updates)
 
   // Hooray for scanMerge !!!
   // We must use flyd.immediate so we get the component's default state on the stream immediately on pageload
-  let state$ = flyd.immediate(flyd.scanMerge(updatePairs, component.state || {}))
+  let state$ = flyd.immediate(flyd.scanMerge(updatePairs, component.state))
+
+  // If any streams within .streams had initial values, let's trigger them for their state update, which can serve as a another way to set default vals 
+  R.map(s => s() !== undefined && s(s()), R.map(R.head, updatePairs))
 
   // update the 'state' key for every new value on the state stream
   let component$ = flyd.map(s => R.assoc('state', s, component), state$)
@@ -63,15 +82,12 @@ function toComponentStream(component, options) {
   component$ = R.reduce(
     (stream, pair) => {
       let [key, child] = pair
-      let child$ = toComponentStream(child, options)
+      let child$ = toComponentStream(child)
       return flyd.lift(R.assocPath(['children', key]), child$, stream)
     }
   , component$
-  , R.toPairs(component.children))
-
-  // You can get a console.log record of all new `.state` objects on your component stream for debugging by setting `options.debug: true`
-  if(options.debug)
-    flyd.map(s => console.log('%cState: %O', "color:green; font-weight: bold;", s.state), component$)
+  , R.toPairs(component.children)
+  )
 
   return component$
 }
