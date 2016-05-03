@@ -1,6 +1,6 @@
 {
   "name": "flimflam-render",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "The page render function for the flimflam architecture",
   "main": "index.js",
   "scripts": {
