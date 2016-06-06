@@ -27,6 +27,7 @@ function render(component) {
   var vtree$ = _flyd2['default'].scan(component.patch, component.container, _flyd2['default'].map(function (changes) {
     return component.view(component.state);
   }, state$));
+  state$([]);
   return { state$: state$, vtree$: vtree$ };
 }
 
@@ -46,14 +47,7 @@ function getObjStreams(obj) {
   return streams;
 }
 
-// Given a state object (and options), return a component stream based on all the streams and updates from the component
-//
-// We use flyd.scanMerge to combine all the streams/updates into one single stream
-//
-// We flip the component's updater functions to make it more compatible with Ramda functions.
-// That is, the updater functions for flyd.scanMerge are like scan: (accumulator, val) -> accumulator
-// instead we want (val, accumulator) -> accumulator
-// That way we can use partial applicaton functions easily like { stream1: R.assoc('prop'), stream2: R.evolve({count: R.inc}) }
+// Convert an object containing nested streams into a single stream of changes
 function toStateStream(state) {
   var streams = getObjStreams(state);
   return _flyd2['default'].combine(function () {

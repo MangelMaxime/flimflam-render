@@ -14,11 +14,12 @@ function render(component) {
   if(component.debug)
     flyd.map(changes => console.log('%cState changes: %O', "color:green; font-weight: bold;", R.map(R.call, changes)), state$)
 
-  let vtree$ = flyd.scan(
+  let vtree$ = flyd. scan(
     component.patch
   , component.container
   , flyd.map(changes => component.view(component.state), state$)
   )
+  state$([])
   return {state$, vtree$}
 }
 
