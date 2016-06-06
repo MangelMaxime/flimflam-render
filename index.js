@@ -1,8 +1,4 @@
-// Render a flimflam component using flyd, ramda, and snabbdom
-
 'use strict';
-
-var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -14,40 +10,43 @@ var _ramda = require('ramda');
 
 var _ramda2 = _interopRequireDefault(_ramda);
 
-var _snabbdom = require('snabbdom');
+// A component has a:
+//   state: object of static data and flyd streams
+//   view: snabbdom view function
+//   debug: if true, will print state data on every stream update in the state
+//   container: the DOM element we want to replace with our rendered snabbdom tree
+//   patch: snabbdom patch function to use for rendering
+function render(component) {
+  var state$ = toStateStream(component.state);
+  // You can get a console.log record of all new `.state` objects on your
+  // component stream for debugging by setting `options.debug: true`
+  if (component.debug) _flyd2['default'].map(function (changes) {
+    return console.log('%cState changes: %O', "color:green; font-weight: bold;", _ramda2['default'].map(_ramda2['default'].call, changes));
+  }, state$);
 
-var _snabbdom2 = _interopRequireDefault(_snabbdom);
-
-_flyd2['default'].lift = require('flyd/module/lift');
-_flyd2['default'].scanMerge = require('flyd/module/scanmerge');
-
-var defaultPatch = _snabbdom2['default'].init([require('snabbdom/modules/class'), require('snabbdom/modules/props'), require('snabbdom/modules/style'), require('snabbdom/modules/eventlisteners'), require('snabbdom/modules/attributes')]);
-
-// Given a UI component object with these keys:
-//   streams: an object of event names set to flyd streams
-//   state: an initial default component (plain js object) to be set immediately on pageload
-//   updates: an array of pairs of flyd streams and updater functions (with each stream, make an update on the component for each new value on that stream)
-//   children: an object of child components
-// Return:
-//   component$: A single component stream that combines the default component, updaters, and child components
-//   vtree$: a stream of snabbdom VTrees for every value on the component stream
-function render(component, view, container, options) {
-  options = options || {};
-  var patch = options.patch || defaultPatch;
-
-  // Render it!
-  var component$ = toComponentStream(component);
-
-  // You can get a console.log record of all new `.state` objects on your component stream for debugging by setting `options.debug: true`
-  if (options.debug) _flyd2['default'].map(function (s) {
-    return console.log('%cState: %O', "color:green; font-weight: bold;", s.state);
-  }, component$);
-
-  var vtree$ = _flyd2['default'].scan(patch, container, _flyd2['default'].map(view, component$));
-  return { component$: component$, vtree$: vtree$ };
+  var vtree$ = _flyd2['default'].scan(component.patch, component.container, _flyd2['default'].map(function (changes) {
+    return component.view(component.state);
+  }, state$));
+  return { state$: state$, vtree$: vtree$ };
 }
 
-// Given a component object (and options), return a component stream based on all the streams and updates from the component
+var isObj = function isObj(obj) {
+  return obj.constructor === Object;
+};
+
+// Return all the streams within an object, including those nested further down
+function getObjStreams(obj) {
+  var stack = [obj];
+  var streams = [];
+  while (stack.length) {
+    var vals = _ramda2['default'].values(stack.pop());
+    streams = _ramda2['default'].concat(streams, _ramda2['default'].filter(_flyd2['default'].isStream, vals));
+    stack = _ramda2['default'].concat(stack, _ramda2['default'].filter(isObj, vals));
+  }
+  return streams;
+}
+
+// Given a state object (and options), return a component stream based on all the streams and updates from the component
 //
 // We use flyd.scanMerge to combine all the streams/updates into one single stream
 //
@@ -55,56 +54,13 @@ function render(component, view, container, options) {
 // That is, the updater functions for flyd.scanMerge are like scan: (accumulator, val) -> accumulator
 // instead we want (val, accumulator) -> accumulator
 // That way we can use partial applicaton functions easily like { stream1: R.assoc('prop'), stream2: R.evolve({count: R.inc}) }
-function toComponentStream(component) {
-  component.updates = component.updates || {};
-  component.streams = component.streams || {};
-  component.state = component.state || {};
-  component.children = component.children || {};
-
-  // By default, every stream in .streams get an update using R.assoc in .updates
-  var updates = _ramda2['default'].compose(_ramda2['default'].merge(_ramda2['default'].__, component.updates), _ramda2['default'].mapObjIndexed(function (stream, key) {
-    return function (val, state) {
-      return _ramda2['default'].assoc(key, val, state);
-    };
-  }))(component.streams);
-
-  // Construct array of pairs of stream/updateFunc to use with scanMerge
-  var updatePairs = _ramda2['default'].compose(_ramda2['default'].map(_ramda2['default'].apply(function (key, fn) {
-    return [component.streams[key], function (state, val) {
-      return fn(val, state);
-    }];
-  })), _ramda2['default'].filter(_ramda2['default'].apply(function (key, fn) {
-    return component.streams[key];
-  })), // only use streams actually present in .streams
-  _ramda2['default'].toPairs)(updates);
-
-  // Hooray for scanMerge !!!
-  // We must use flyd.immediate so we get the component's default state on the stream immediately on pageload
-  var state$ = _flyd2['default'].immediate(_flyd2['default'].scanMerge(updatePairs, component.state));
-
-  // If any streams within .streams had initial values, let's trigger them for their state update, which can serve as a another way to set default vals
-  _ramda2['default'].map(function (s) {
-    return s() !== undefined && s(s());
-  }, _ramda2['default'].map(_ramda2['default'].head, updatePairs));
-
-  // update the 'state' key for every new value on the state stream
-  var component$ = _flyd2['default'].map(function (s) {
-    return _ramda2['default'].assoc('state', s, component);
-  }, state$);
-
-  // Reduce over all child components, lifting each one into a single parent stream
-  // Stream of child updates of pairs of [childName, childcomponent]
-  component$ = _ramda2['default'].reduce(function (stream, pair) {
-    var _pair = _slicedToArray(pair, 2);
-
-    var key = _pair[0];
-    var child = _pair[1];
-
-    var child$ = toComponentStream(child);
-    return _flyd2['default'].lift(_ramda2['default'].assocPath(['children', key]), child$, stream);
-  }, component$, _ramda2['default'].toPairs(component.children));
-
-  return component$;
+function toStateStream(state) {
+  var streams = getObjStreams(state);
+  return _flyd2['default'].combine(function () {
+    var chng = arguments[arguments.length - 1];
+    var self = arguments[arguments.length - 2];
+    self(chng);
+  }, streams);
 }
 
 module.exports = render;

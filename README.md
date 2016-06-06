@@ -1,24 +1,52 @@
 
 # flimflam-render
 
-Given a root flimflam component (an object with `.streams`, `.updates`, `.data`, and `.children`), a snabbdom view function, and a DOM Node container, render the component to the page. Continuously patch/update the page using the streams and updates from the component.
+Render a flimflam UI component onto the page (and keep rendering/patching it on every stream update).
 
-Use the very top-level, parent component for your page. You only need to call this function once per page.
+* [Flim flam tutorials and getting started](http://flimflamjs.github.io/#start)
 
-In your flimflam components, you can leave out any of `.streams`, `.updates`, `.data`, and `.children`. They are all optional.
+## render(component)
+
+The component object can have these properties:
+
+* state (required): an object of static data and flyd streams used in your UI
+* view (required): a function that takes the state and returns a snabbdom vtree
+* container (required): a DOM node container that you want to replace and patch your vtree into
+* patch (required): the snabbdom patch function you are using
+* debug (optional): boolean flag -- whether to console.log state updates for debugging
+
+The render function will render and continuously patch your flimflam component onto the page. Any updates in any nested flyd streams within your state will cause your view function to be called again and the DOM to be patched.
+
+This function is also included in flimflam core (ff-core/render).
+
+
+__Usage__
 
 ```js
 import render from 'flimflam-render'
 
 // import your app's parent component and view function...
+import component from './my-component'
 
-render(component, viewFunc, domContainer, options)
+// init your snabbdom patch function
+import snabbdom from 'snabbdom'
+const patch = snabbdom.init([...])
 
-// state: a flimflam state object (your app's root component for the page)
-// viewFunc: snabbdom view function that takes a state object and returns a snabbdom VTree
-// domContainer: an HTML Node from the actual web-page to render into (this node will be replaced with your view function's root node)
-// options: an optional object of..
-//     patch: your custom snabbdom patch function
-//     debug: (Boolean) whether to log every new set of state data for debugging
+render({
+  state: component.init()
+, view: component.view
+, container: document.querySelector('div.js-container')
+, patch: patch
+, debug: true
+})
+```
+
+
+### run tests
+
+use mocha and zuul
+
+```js
+zuul --local 8088 --ui mocha-qunit -- test/index.js
 ```
 
