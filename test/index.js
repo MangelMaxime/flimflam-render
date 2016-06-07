@@ -41,7 +41,6 @@ test('it will patch on new stream data over time', () => {
   render({
     container, patch, view
   , state: {streamVal: s}
-  , debug: true
   })
   assert.equal(container.textContent, 'wat!!')
   s('goodbye')
@@ -50,15 +49,27 @@ test('it will patch on new stream data over time', () => {
 
 test('it patches on nested streams', () => {
   var container = document.createElement('div')
-  const view = state => h('p', state.nested.streamVal())
+  const view = state => h('p', state.nested.x.streamVal() + state.y())
   const s = flyd.stream('wat!!')
   render({
     container, patch, view
-  , state: {nested: {streamVal: s}}
-  , debug: true
+  , state: {y: s, nested: {x: {streamVal: s}}}
   })
-  assert.equal(container.textContent, 'wat!!')
-  s('goodbye')
-  assert.equal(container.textContent, 'goodbye')
+  assert.equal(container.textContent, 'wat!!wat!!')
+  s('bye')
+  assert.equal(container.textContent, 'byebye')
+})
+
+test('it patches with multiple empty streams', () => {
+  var container = document.createElement('div')
+  const view = state => h('p', state.s1() || 'hi')
+  let state = {s1: flyd.stream(), s2: flyd.stream()}
+  render({ container, patch, view, state })
+  assert.equal(container.textContent, 'hi')
+  state.s1('x')
+  assert.equal(container.textContent, 'x')
+  state.s2('y')
+  state.s1('z')
+  assert.equal(container.textContent, 'z')
 })
 

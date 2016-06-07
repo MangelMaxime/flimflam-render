@@ -10,29 +10,26 @@ var _ramda = require('ramda');
 
 var _ramda2 = _interopRequireDefault(_ramda);
 
+_flyd2['default'].mergeAll = require('flyd/module/mergeall');
+
 // A component has a:
 //   state: object of static data and flyd streams
 //   view: snabbdom view function
-//   debug: if true, will print state data on every stream update in the state
 //   container: the DOM element we want to replace with our rendered snabbdom tree
 //   patch: snabbdom patch function to use for rendering
 function render(component) {
-  var state$ = toStateStream(component.state);
-  // You can get a console.log record of all new `.state` objects on your
-  // component stream for debugging by setting `options.debug: true`
-  if (component.debug) _flyd2['default'].map(function (changes) {
-    return console.log('%cState changes: %O', "color:green; font-weight: bold;", _ramda2['default'].map(_ramda2['default'].call, changes));
-  }, state$);
+  var streams = getObjStreams(component.state);
+  var state$ = toStateStream(streams);
 
   var vtree$ = _flyd2['default'].scan(component.patch, component.container, _flyd2['default'].map(function (changes) {
     return component.view(component.state);
   }, state$));
-  state$([]);
+  state$([]); // initial patch
   return { state$: state$, vtree$: vtree$ };
 }
 
-var isObj = function isObj(obj) {
-  return obj.constructor === Object;
+var isObj = function isObj(x) {
+  return x.constructor === Object;
 };
 
 // Return all the streams within an object, including those nested further down
@@ -48,13 +45,8 @@ function getObjStreams(obj) {
 }
 
 // Convert an object containing nested streams into a single stream of changes
-function toStateStream(state) {
-  var streams = getObjStreams(state);
-  return _flyd2['default'].combine(function () {
-    var chng = arguments[arguments.length - 1];
-    var self = arguments[arguments.length - 2];
-    self(chng);
-  }, streams);
+function toStateStream(streams) {
+  return _flyd2['default'].mergeAll(streams);
 }
 
 module.exports = render;

@@ -13,7 +13,6 @@ The component object can have these properties:
 * view (required): a function that takes the state and returns a snabbdom vtree
 * container (required): a DOM node container that you want to replace and patch your vtree into
 * patch (required): the snabbdom patch function you are using
-* debug (optional): boolean flag -- whether to console.log state updates for debugging
 
 The render function will render and continuously patch your flimflam component onto the page. Any updates in any nested flyd streams within your state will cause your view function to be called again and the DOM to be patched.
 
@@ -37,7 +36,6 @@ render({
 , view: component.view
 , container: document.querySelector('div.js-container')
 , patch: patch
-, debug: true
 })
 ```
 
