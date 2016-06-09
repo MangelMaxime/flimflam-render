@@ -9,19 +9,16 @@ flyd.mergeAll = require('flyd/module/mergeall')
 //   container: the DOM element we want to replace with our rendered snabbdom tree
 //   patch: snabbdom patch function to use for rendering
 function render(component) {
-  let streams = getObjStreams(component.state)
-  let state$ = toStateStream(streams)
-
-  let vtree$ = flyd.scan(
+  const state$ = flyd.mergeAll(getObjStreams(component.state))
+  const vtree$ = flyd.scan(
     component.patch
   , component.container
   , flyd.map(changes => component.view(component.state), state$)
   )
-  state$([]) // initial patch
-  return {state$, vtree$}
+  const dom$ = flyd.map(R.prop('elm'), vtree$)
+  state$([]) // trigger an initial patch
+  return {state$, vtree$, dom$}
 }
-
-const isObj = x => x.constructor === Object
 
 // Return all the streams within an object, including those nested further down
 function getObjStreams(obj) {
@@ -35,10 +32,8 @@ function getObjStreams(obj) {
   return streams
 }
 
-// Convert an object containing nested streams into a single stream of changes
-function toStateStream(streams) {
-  return flyd.mergeAll(streams)
-}
+// Is the given parameter a plain JS object?
+const isObj = x => x.constructor === Object
 
 module.exports = render
 
