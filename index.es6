@@ -33,7 +33,7 @@ function getObjStreams(obj) {
 }
 
 // Is the given parameter a plain JS object?
-const isObj = x => x.constructor === Object
+const isObj = x => x && x.constructor === Object
 
 module.exports = render
 

@@ -12,8 +12,6 @@ var _ramda2 = _interopRequireDefault(_ramda);
 
 _flyd2['default'].mergeAll = require('flyd/module/mergeall');
 
-var log = _ramda2['default'].curryN(2, console.log.bind(console));
-
 // A component has a:
 //   state: object of static data and flyd streams
 //   view: snabbdom view function
@@ -29,10 +27,6 @@ function render(component) {
   return { state$: state$, vtree$: vtree$, dom$: dom$ };
 }
 
-var isObj = function isObj(x) {
-  return x.constructor === Object;
-};
-
 // Return all the streams within an object, including those nested further down
 function getObjStreams(obj) {
   var stack = [obj];
@@ -44,6 +38,11 @@ function getObjStreams(obj) {
   }
   return streams;
 }
+
+// Is the given parameter a plain JS object?
+var isObj = function isObj(x) {
+  return x && x.constructor === Object;
+};
 
 module.exports = render;
 
